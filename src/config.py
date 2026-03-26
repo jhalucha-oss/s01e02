@@ -1,10 +1,8 @@
 import json
 import os
-from pathlib import Path
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SANDBOX_ROOT = PROJECT_ROOT / "sandbox"
+AG3NTS_API_KEY = os.getenv("AG3NTS_API_KEY", "")
 
 
 def _load_extra_headers() -> dict[str, str]:
@@ -23,24 +21,36 @@ def _load_extra_headers() -> dict[str, str]:
     return {str(key): str(value) for key, value in parsed.items()}
 
 
-sandbox = {
-    "root": SANDBOX_ROOT,
-}
-
-sandbox["root"].mkdir(parents=True, exist_ok=True)
-
 api = {
     "model": os.getenv("OPENAI_MODEL", "gpt-4.1"),
     "instructions": (
-        "You are a helpful assistant with access to a sandboxed filesystem.\n"
-        "You can list, read, write, and delete files within the sandbox.\n"
-        "Always use the available tools to interact with files.\n"
+        "You are a helpful assistant with access to task-specific tools.\n"
+        "You do not have file access. The suspect list is provided in the "
+        "conversation.\n"
+        "First call get_power_plants. Then call find_person_near_power_plant with "
+        "the suspect list from the conversation and the returned powerPlants. "
+        "After that retrieve the access level and send the final answer to "
+        "verify.\n"
         "Be concise in your responses."
     ),
     "api_key": os.getenv("AI_API_KEY", ""),
+    "ag3nts_api_key": os.getenv("AG3NTS_API_KEY", "8b965762-8a26-4ce5-aaa4-ec6dc43232c3"),
     "responses_api_endpoint": os.getenv(
         "RESPONSES_API_ENDPOINT",
         "https://api.openai.com/v1/responses",
     ),
+    "location_api_endpoint": os.getenv(
+        "LOCATION_API_ENDPOINT",
+        "https://hub.ag3nts.org/api/location",
+    ),
+    "access_level_api_endpoint": os.getenv(
+        "ACCESS_LEVEL_API_ENDPOINT",
+        "https://hub.ag3nts.org/api/accesslevel",
+    ),
+    "verify_api_endpoint": os.getenv(
+        "VERIFY_API_ENDPOINT",
+        "https://hub.ag3nts.org/verify",
+    ),
+    "power_plants_url": os.getenv("POWER_PLANTS_URL", ""),
     "extra_headers": _load_extra_headers(),
 }

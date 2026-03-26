@@ -1,7 +1,8 @@
+import json
+import src.S01E02Data as data
 from src.config import api
 from src.executor import process_query
 from src.tools import handlers, tools
-from src.utils.sandbox import initialize_sandbox
 
 
 CONFIG = {
@@ -12,25 +13,32 @@ CONFIG = {
 }
 
 
-QUERIES = [
-    "What files are in the sandbox?",
-    "Create a file called hello.txt with content: 'Hello, World!'",
-    "Read the hello.txt file",
-    "Get info about hello.txt",
-    "Create a directory called 'docs'",
-    "Create a file docs/readme.txt with content: 'Documentation folder'",
-    "List files in the docs directory",
-    "Delete the hello.txt file",
-    "Try to read ../config.js",
+SUSPECTS = [
+    {
+        "name": person["name"],
+        "surname": person["surname"],
+        "birthYear": person["born"],
+    }
+    for person in data.people
 ]
 
 
-def main() -> None:
-    initialize_sandbox()
-    print("Sandbox prepared: empty state\n")
+def build_query() -> str:
+    if not SUSPECTS:
+        raise RuntimeError("Fill SUSPECTS with data from S01E01 before running the app.")
 
-    for query in QUERIES:
-        process_query(query, CONFIG)
+    return (
+        "Solve the 'findhim' task using the provided conversation data.\n"
+        "The suspect list is provided below.\n"
+        "First call get_power_plants. Then call find_person_near_power_plant with "
+        "the suspect list and the returned powerPlants. After that call "
+        "get_access_level and finally send_verify.\n"
+        f"Suspects: {json.dumps(SUSPECTS, ensure_ascii=False)}"
+    )
+
+
+def main() -> None:
+    process_query(build_query(), CONFIG)
 
 
 if __name__ == "__main__":
