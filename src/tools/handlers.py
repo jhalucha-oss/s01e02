@@ -1,8 +1,18 @@
 import json
 from urllib import error, request
 
+import src.S01E02Data as _data
 from src.MathFunctions import haversine_distance
 from src.config import api
+
+_SUSPECTS = [
+    {
+        "name": person["name"],
+        "surname": person["surname"],
+        "birthYear": person.get("born", person.get("birthYear")),
+    }
+    for person in _data.people
+]
 
 def _post_json(url: str, payload: dict):
     headers = {
@@ -214,22 +224,36 @@ def _normalize_birth_year(value):
     raise RuntimeError(f"Unsupported birth year value: {value}")
 
 
-def _find_closest_power_plant(lat: float, lon: float, power_plants: list[dict]):
-    closest = None
+def calculate_distance_between_points(args):
+    distance_km = haversine_distance(
+        args["person_latitude"],
+        args["person_longitude"],
+        args["power_plant_latitude"],
+        args["power_plant_longitude"],
+    )
+    return {"distanceKm": round(distance_km, 3)}
 
-    for plant in power_plants:
-        distance_km = haversine_distance(lat, lon, plant["lat"], plant["lon"])
 
-        candidate = {
-            "powerPlantName": plant["name"],
-            "powerPlantCode": plant["code"],
-            "distanceKm": round(distance_km, 3),
+def get_next_suspect(args):
+    index = args.get("index", 0)
+
+    if index < 0 or index >= len(_SUSPECTS):
+        return {
+            "suspect": None,
+            "index": index,
+            "total": len(_SUSPECTS),
+            "hasMore": False,
         }
 
-        if closest is None or candidate["distanceKm"] < closest["distanceKm"]:
-            closest = candidate
+    suspect = _SUSPECTS[index]
 
-    return closest
+    return {
+        "suspect": suspect,
+        "index": index,
+        "total": len(_SUSPECTS),
+        "hasMore": index + 1 < len(_SUSPECTS),
+        "nextIndex": index + 1,
+    }
 
 
 def get_power_plants(args):
@@ -257,49 +281,6 @@ def get_person_locations(args):
         "surname": args["surname"],
         "locations": locations,
     }
-
-
-def find_person_near_power_plant(args):
-    suspects = args["suspects"]
-    power_plants = args["powerPlants"]
-
-    best_match = None
-
-    for suspect in suspects:
-        birth_year = _normalize_birth_year(
-            suspect.get("birthYear", suspect.get("born"))
-        )
-        person_result = get_person_locations(
-            {
-                "name": suspect["name"],
-                "surname": suspect["surname"],
-            }
-        )
-
-        for location in person_result["locations"]:
-            closest_plant = _find_closest_power_plant(
-                location["lat"],
-                location["lon"],
-                power_plants,
-            )
-
-            candidate = {
-                "name": suspect["name"],
-                "surname": suspect["surname"],
-                "birthYear": birth_year,
-                "powerPlantName": closest_plant["powerPlantName"],
-                "powerPlant": closest_plant["powerPlantCode"],
-                "distanceKm": closest_plant["distanceKm"],
-                "matchedLocation": location,
-            }
-
-            if best_match is None or candidate["distanceKm"] < best_match["distanceKm"]:
-                best_match = candidate
-
-    if best_match is None:
-        raise RuntimeError("Could not determine a matching suspect")
-
-    return best_match
 
 
 def get_access_level(args):
@@ -354,9 +335,10 @@ def send_verify(args):
 
 
 handlers_finding_suspect = {
+    "get_next_suspect": get_next_suspect,
     "get_power_plants": get_power_plants,
     "get_person_locations": get_person_locations,
-    "find_person_near_power_plant": find_person_near_power_plant,
+    "calculate_distance_between_points": calculate_distance_between_points,
     "get_access_level": get_access_level,
     "send_verify": send_verify,
 }

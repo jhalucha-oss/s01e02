@@ -1,6 +1,27 @@
 findhim_tools = [
     {
         "type": "function",
+        "name": "get_next_suspect",
+        "description": (
+            "Return one suspect from the suspects list by index. "
+            "Start with index 0, then use nextIndex from the response to get the next one. "
+            "When hasMore is false, all suspects have been processed."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "index": {
+                    "type": "integer",
+                    "description": "Zero-based index of the suspect to retrieve. Start at 0.",
+                },
+            },
+            "required": ["index"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+    {
+        "type": "function",
         "name": "get_power_plants",
         "description": (
             "Fetch the list of power plants from the remote findhim_locations.json "
@@ -40,80 +61,6 @@ findhim_tools = [
     },
     {
         "type": "function",
-        "name": "find_person_near_power_plant",
-        "description": (
-            "Analyze the provided suspects and the provided power plants, fetch "
-            "sighting locations for each suspect, and use the Python distance "
-            "function to find the person seen closest to a power plant. Call "
-            "get_power_plants first, then pass its powerPlants result here."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "suspects": {
-                    "type": "array",
-                    "description": (
-                        "List of suspects provided in the conversation. Each item "
-                        "must include name, surname, and birthYear."
-                    ),
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "name": {
-                                "type": "string",
-                                "description": "First name of the suspect",
-                            },
-                            "surname": {
-                                "type": "string",
-                                "description": "Last name of the suspect",
-                            },
-                            "birthYear": {
-                                "type": "integer",
-                                "description": "Birth year of the suspect",
-                            },
-                        },
-                        "required": ["name", "surname", "birthYear"],
-                        "additionalProperties": False,
-                    },
-                },
-                "powerPlants": {
-                    "type": "array",
-                    "description": (
-                        "Power plant data returned by get_power_plants. Each item "
-                        "must include the plant name, coordinates, and code."
-                    ),
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "name": {
-                                "type": "string",
-                                "description": "Power plant or city name",
-                            },
-                            "lat": {
-                                "type": "number",
-                                "description": "Latitude of the power plant",
-                            },
-                            "lon": {
-                                "type": "number",
-                                "description": "Longitude of the power plant",
-                            },
-                            "code": {
-                                "type": "string",
-                                "description": "Power plant code like PWR0000PL",
-                            },
-                        },
-                        "required": ["name", "lat", "lon", "code"],
-                        "additionalProperties": False,
-                    },
-                },
-            },
-            "required": ["suspects", "powerPlants"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    },
-    {
-        "type": "function",
         "name": "get_access_level",
         "description": (
             "Fetch the access level for a specific person using name, surname, "
@@ -136,6 +83,37 @@ findhim_tools = [
                 },
             },
             "required": ["name", "surname", "birthYear"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+    {
+        "type": "function",
+        "name": "calculate_distance_between_points",
+        "description": (
+            "Calculate the distance between two points on the Earth's surface (example: distance between person and power plant)."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                    "person_latitude": {
+                        "type": "number",
+                        "description": "Latitude of the person",
+                },
+                "person_longitude": {
+                        "type": "number",
+                        "description": "Longitude of the person",
+                },
+                "power_plant_latitude": {
+                    "type": "number",
+                    "description": "Latitude of the power plant",
+                },
+                "power_plant_longitude": {
+                    "type": "number",
+                    "description": "Longitude of the power plant",
+                },
+            },
+            "required": ["person_latitude", "person_longitude", "power_plant_latitude", "power_plant_longitude"],
             "additionalProperties": False,
         },
         "strict": True,
@@ -170,5 +148,5 @@ findhim_tools = [
             "additionalProperties": False,
         },
         "strict": True,
-    },
+    }
 ]
