@@ -1,9 +1,10 @@
 import json
+import time
 
 from src.api import chat, extract_text, extract_tool_calls
 
 
-MAX_TOOL_ROUNDS = 10
+MAX_TOOL_ROUNDS = 30
 
 
 def log_query(query: str) -> None:
@@ -58,6 +59,7 @@ def process_query(query, config):
     conversation = [{"role": "user", "content": query}]
 
     for _ in range(MAX_TOOL_ROUNDS):
+        time.sleep(1)
         response = chat(**chat_config, input=conversation)
         tool_calls = extract_tool_calls(response)
 
