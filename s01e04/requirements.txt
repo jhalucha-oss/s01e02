@@ -1,0 +1,2 @@
+# Stdlib only — no pip packages required for the agent.
+# Optional: python-dotenv if you want to load .env automatically.
