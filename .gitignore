@@ -25,6 +25,11 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
+*.pyc
+**/__pycache__/
+*.pyc
+*.pyo
+
 
 # Editors
 .vscode/
