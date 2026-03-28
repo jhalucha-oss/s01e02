@@ -1,5 +1,5 @@
 import json
-from urllib import error, request
+from urllib import error, parse, request
 
 from src.config import api
 
@@ -57,7 +57,32 @@ def redirect_package(args: dict) -> dict:
     return result
 
 
+def get_weather(args: dict) -> dict:
+    """Fetch current weather for a city using wttr.in (no API key needed)."""
+    city = args["city"]
+    city_encoded = parse.quote(city)
+    url = f"https://wttr.in/{city_encoded}?format=j1"
+
+    req = request.Request(url, headers={"User-Agent": "curl/7.0"})
+    try:
+        with request.urlopen(req) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except error.URLError as url_error:
+        raise RuntimeError(f"Weather request failed: {url_error.reason}") from url_error
+
+    current = data["current_condition"][0]
+    return {
+        "city": city,
+        "temperature_c": int(current["temp_C"]),
+        "feels_like_c": int(current["FeelsLikeC"]),
+        "description": current["weatherDesc"][0]["value"],
+        "humidity_pct": int(current["humidity"]),
+        "wind_kmh": int(current["windspeedKmph"]),
+    }
+
+
 handlers_proxy = {
     "check_package": check_package,
     "redirect_package": redirect_package,
+    "get_weather": get_weather,
 }

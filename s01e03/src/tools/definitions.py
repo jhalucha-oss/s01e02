@@ -47,4 +47,24 @@ proxy_tools = [
         },
         "strict": True,
     },
+    {
+        "type": "function",
+        "name": "get_weather",
+        "description": (
+            "Get current weather conditions for a given city. "
+            "Returns temperature, description, humidity, and wind speed."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string",
+                    "description": "City name, e.g. 'Warsaw', 'Gdansk', 'Krakow'.",
+                },
+            },
+            "required": ["city"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
 ]

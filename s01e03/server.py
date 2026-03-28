@@ -9,6 +9,7 @@ with function calling (check_package / redirect_package) to handle requests.
 """
 
 import json
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from src.api import chat, extract_text, extract_tool_calls
@@ -94,17 +95,17 @@ class ProxyHandler(BaseHTTPRequestHandler):
             return
 
         session_id = payload.get("sessionID")
-        question = payload.get("question")
+        question = payload.get("msg")
 
         if not session_id or not question:
-            self._send_json(400, {"error": "Missing sessionID or question"})
+            self._send_json(400, {"error": "Missing sessionID or msg"})
             return
 
         print(f"\n[{session_id}] Q: {question}")
         answer = _process_message(session_id, question)
         print(f"[{session_id}] A: {answer}")
 
-        self._send_json(200, {"reply": answer})
+        self._send_json(200, {"msg": answer})
 
     def do_GET(self):  # noqa: N802
         if self.path == "/health":
@@ -115,10 +116,10 @@ class ProxyHandler(BaseHTTPRequestHandler):
 
 def main() -> None:
     host = "0.0.0.0"
-    port = 8000
+    port = int(os.getenv("PORT", "5000"))
     server = HTTPServer((host, port), ProxyHandler)
     print(f"Server running on http://{host}:{port}")
-    print("Endpoint: POST / with JSON body {sessionID, question}")
+    print("Endpoint: POST / with JSON body {sessionID, msg}")
     print("Health:   GET  /health")
     print("Press Ctrl+C to stop.\n")
     try:
