@@ -1,7 +1,7 @@
 """
 Image Recognition Agent (Python)
 --------------------------------
-Classifies images in images/ using profiles in knowledge/, writes to images/organized/.
+Fake report generation agent.
 """
 
 import sys
@@ -16,15 +16,15 @@ from src.agent import run
 from src.helpers import logger as log
 from src.helpers.stats import log_stats
 
-CLASSIFICATION_QUERY = """Classify all images in the images/ folder based on the character knowledge files.
-Read the knowledge files first, then analyze each image and copy it to the appropriate character folder(s)."""
+DOCUMENT_QUERY = """Process the shipment documentation and complete the declaration form.
+Read all documentation files (starting from index.md), including attachments and images, then fill in the declaration according to the regulations and submit it for verification."""
 
 
 def main() -> None:
-    log.box("Image Recognition Agent\nClassify images by character")
-    log.start("Starting image classification...")
+    log.box("Image Recognition Agent\nFake report generation agent.")
+    log.start("Starting image Fake report generation...")
     try:
-        result = run(CLASSIFICATION_QUERY)
+        result = run(DOCUMENT_QUERY)
         log.success("Classification complete")
         log.info(result["response"])
         log_stats()
