@@ -1,0 +1,15 @@
+{
+  "sentAnswer": {
+    "declaration": "-----BEGIN TEMPLATE-----\n{\"apikey\":\"APIKEY\",\"task\":\"railway\",\"answer\":{\"action\":\"help\"}}"
+  },
+  "request": {
+    "task": "sendit",
+    "answer": {
+      "declaration": "-----BEGIN TEMPLATE-----\n{\"apikey\":\"APIKEY\",\"task\":\"railway\",\"answer\":{\"action\":\"help\"}}"
+    }
+  },
+  "verifyResponse": {
+    "code": -980,
+    "message": "Declaration does not contain the required template start marker."
+  }
+}

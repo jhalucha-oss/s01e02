@@ -1,0 +1,21 @@
+{
+  "requestBody": {
+    "task": "railway",
+    "answer": {
+      "action": "save",
+      "route": "X-01"
+    }
+  },
+  "requestWithApikey": {
+    "task": "railway",
+    "answer": {
+      "action": "save",
+      "route": "X-01"
+    },
+    "apikey": "<redacted>"
+  },
+  "verifyResponse": {
+    "code": 0,
+    "message": "{FLG:COUNTRYROADS}"
+  }
+}
