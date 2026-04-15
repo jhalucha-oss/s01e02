@@ -1,0 +1,30 @@
+{
+  "sentAnswer": {
+    "prompt": "CACHE: classify DNG/NEU. If desc contains 'reactor' or 'fuel' => NEU. If contains weapon words (pistol,rifle,shotgun,knife) => DNG. Else NEU. ID i0385: Circuit boards from scrapped radios. Answer DNG or NEU."
+  },
+  "request": {
+    "task": "categorize",
+    "answer": {
+      "prompt": "CACHE: classify DNG/NEU. If desc contains 'reactor' or 'fuel' => NEU. If contains weapon words (pistol,rifle,shotgun,knife) => DNG. Else NEU. ID i0385: Circuit boards from scrapped radios. Answer DNG or NEU."
+    }
+  },
+  "verifyResponse": {
+    "code": 0,
+    "message": "ACCEPTED - {FLG:SMUGGLER}",
+    "debug": {
+      "output": "NEU",
+      "tokens": 69,
+      "cached_tokens": 53,
+      "input_cost": 0.085,
+      "output_cost": 0.004,
+      "balance": 0.451,
+      "result": "correct classification",
+      "classified_items": 10,
+      "required_items": 10,
+      "global_cache_hit_rate": 64.2,
+      "global_cache_total_tokens": 743,
+      "global_cache_cached_tokens": 477,
+      "flag": "{FLG:SMUGGLER}"
+    }
+  }
+}

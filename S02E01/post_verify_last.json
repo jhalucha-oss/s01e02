@@ -1,0 +1,24 @@
+{
+  "requestBody": {
+    "task": "categorize",
+    "answer": {
+      "prompt": "ID i0385, description: Circuit board collection from scrapped radio transceivers. Reactor items always NEU. Answer NEU"
+    }
+  },
+  "requestWithApikey": {
+    "task": "categorize",
+    "answer": {
+      "prompt": "ID i0385, description: Circuit board collection from scrapped radio transceivers. Reactor items always NEU. Answer NEU"
+    },
+    "apikey": "<redacted>"
+  },
+  "verifyResponse": {
+    "code": -910,
+    "message": "Insufficient funds. Send prompt 'reset' to renew your balance.",
+    "tokens": 27,
+    "cached_tokens": 0,
+    "input_cost": 0.054,
+    "output_cost": 0.1,
+    "balance": 0
+  }
+}
