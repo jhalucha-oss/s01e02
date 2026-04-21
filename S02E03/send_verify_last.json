@@ -1,0 +1,15 @@
+{
+  "sentAnswer": {
+    "rotate": "2x2"
+  },
+  "request": {
+    "task": "electricity",
+    "answer": {
+      "rotate": "2x2"
+    }
+  },
+  "verifyResponse": {
+    "code": 0,
+    "message": "{FLG:ROTATEIT}"
+  }
+}
