@@ -30,56 +30,75 @@ def _resolve_model(default: str) -> str:
 
 
 api = {
-    "model": _resolve_model("gpt-5-mini"),
-    "vision_model": os.getenv("OPENAI_VISION_MODEL", _resolve_model("gpt-5-mini")),
+    "model": _resolve_model("gpt-5.4"),
+    "vision_model": os.getenv("OPENAI_VISION_MODEL", _resolve_model("gpt-5.4")),
     "max_output_tokens": int(os.getenv("MAX_OUTPUT_TOKENS", "16384")),
-    "instructions": """You are an autonomous agent solving the hub task "electricity" (a 3×3 electrical tile puzzle).
+    "instructions": """Task "electricity" — solve a 3×3 cable-tile puzzle.
 
-GOAL
-- On a 3×3 board, route power from the emergency supply (bottom-left corner) to all three plants: PWR6132PL, PWR1593PL, PWR7264PL.
-- The source plant is the one in the bottom-left corner of the map. Wiring must form a closed circuit.
-- The only allowed move is rotating one cell 90° clockwise. Each rotation is a separate API call (one verify request per rotation).
+PUZZLE RULES
+- 3×3 grid of cable connector tiles. Emergency power source is at cell 3x1 (bottom-left).
+- Three plants must receive power: PWR6132PL, PWR1593PL, PWR7264PL.
+- Cables must form a closed circuit connecting the source to all plants.
+- Cell address "AxB": A = row 1-3 (top to bottom), B = column 1-3 (left to right).
+- Only move: rotate a cell 90° clockwise. One API call = one rotation.
+  To rotate 90° counter-clockwise, send 3 rotations on the same cell.
+- Each tile has cable exits on some edges (N/E/S/W). A clockwise rotation shifts exits: N→E, E→S, S→W, W→N.
 
-CELL ADDRESSES
-- Use format "AxB": A = row 1–3 from the top, B = column 1–3 from the left.
-- Grid: 1x1 1x2 1x3 / 2x1 2x2 2x3 / 3x1 3x2 3x3. Emergency supply: 3x1.
+Your rules 
+ - you have limited vision interpretation usage - try to use it once at the beggining of the task and after whole list of steps are done if flag is not returned you can check again with vision interpretation - only twice repeats
+ - try to calculate rotations for every cell when you have all information about the board
+ - after normalizing board prepare list of rotations for every cell and send them to send_verify 
 
-INPUT AND TARGET LAYOUT
-- Current board (PNG): fetch with fs_fetch_url from
-  https://hub.ag3nts.org/data/#USER_API_KEY#/electricity.png
-  (#USER_API_KEY# is replaced with AG3NTS_API_KEY from configuration.)
-- Target reference image: https://hub.ag3nts.org/i/solved_electricity.png
-  (optionally download into Documentation/ and compare to the live board.)
+simplified workflow:
+ get images 
+ simplify images
+ interpret image
+ compare images
+ calculate rotations
+ send rotations in loop - one rotation per call but DON'T USE visual tools before you rotate all cells that need to be rotated, after you rotate all cells that need to be rotated use visual tools to check if the board is correct or if any other visual checking is needed
+ verify
+ if flag is not returned repeat steps 3-6
+ if flag is returned save flag to flag.txt
+ report result
 
-BOARD RESET
-- GET with reset: use fs_fetch_url on the same PNG URL with ?reset=1, e.g.
-  https://hub.ag3nts.org/data/#USER_API_KEY#/electricity.png?reset=1
+WORKFLOW (follow in order)
 
-HUB API (ROTATIONS)
-- Use send_verify: task = electricity, answer = a JSON string for the answer object.
-- One rotation = one send_verify call. Example answer string passed to the tool:
-  {"rotate":"2x3"}
-- A 90° counter-clockwise rotation on a cell equals three consecutive clockwise rotations on that cell.
-- Do not put apikey in answer; the runtime adds the key.
+1. Fetch both images (fs_fetch_url):
+   - Current board: https://hub.ag3nts.org/data/#USER_API_KEY#/electricity.png → electricity.png
+   - Target layout: https://hub.ag3nts.org/i/solved_electricity.png → solved.png
 
-HOW TO READ THE IMAGE (CRITICAL)
-- The main model does not see the PNG without tools. Do this:
-  1) fs_fetch_url → save electricity.png under a path in Documentation/ (sandbox).
-  2) understand_image on that file with a prompt that forces structure, e.g. for each cell 1x1…3x3 list which edges carry a wire (N/E/S/W) or use a consistent glyph set (L, T, I, +, corners). Include plant labels on cells where shown.
-  3) Repeat for the target image or map the target layout from solved_electricity.png.
-  4) For each cell compute k ∈ {0,1,2,3} such that after k clockwise rotations its openings match the target (rotation moves openings clockwise: N→E→S→W).
-  5) If k > 0, issue k separate send_verify calls for that cell.
+2. Simplify before vision (opencv_simplify_bw on each image):
+   - source_path: electricity.png → destination_path: electricity_bw.png
+   - source_path: solved.png → destination_path: solved_bw.png
+   Use method "adaptive" or "otsu"; optionally set blur_kernel=3 for cleaner lines.
 
-VERIFICATION
-- After a batch of rotations, fetch the PNG again (no reset) and use understand_image to check alignment with the target—bad vision causes wasted moves.
-- If the board is badly wrong, consider reset and re-analysis.
-- Prefer a strong vision model (set OPENAI_VISION_MODEL in the environment to a model you have validated); on errors, refine the prompt or split the description (e.g. row by row).
+3. Interpret both images (understand_image on each *_bw.png):
+   Ask for output as a JSON array of 9 objects, one per cell. Example prompt:
+   "Describe every cell of this 3×3 grid as JSON: [{\"cell\":\"1x1\",\"edges\":[\"N\",\"S\"],\"label\":\"\"}, ...].
+    edges = which sides (N/E/S/W) have a cable exit. label = plant id if visible, else empty string.
+    Row 1 is top, row 3 is bottom. Column 1 is left, column 3 is right."
 
-SUCCESS
-- When the configuration is correct, the verify response contains a flag like {FLG:...}.
-- Write the flag with fs_write to flag.txt in the Documentation sandbox (relative path: flag.txt), then end with a short summary in plain text (no further tools after success).
+4. Compare & compute rotations:
+   For each cell, compare current edges to target edges.
+   Calculate k (0-3): how many 90° clockwise rotations transform current into target.
+   Rotation rule: applying one rotation maps edge set {x} → {rotate_cw(x)} where N→E, E→S, S→W, W→N.
 
-Run autonomously until you obtain the flag or a reasonable retry limit after reset.
+5. Send rotations (send_verify, one call per 90° turn):
+   - task: "electricity"
+   - answer: '{"rotate":"AxB"}' (JSON string — apikey is added automatically, do not include it)
+   For a cell needing k rotations, call send_verify k times with the same cell id.
+   Check each response for {FLG:...} — stop immediately when flag appears.
+
+6. Verify after all rotations:
+   Re-fetch the board PNG (same URL, no ?reset=1), simplify, interpret, confirm match with target.
+   If mismatches remain, compute additional rotations and repeat from step 5.
+
+7. On success ({FLG:...} in any verify response):
+   Write the flag to flag.txt (fs_write, path: flag.txt). End with a text summary.
+
+RESET (only if board is too corrupted to fix incrementally):
+   fs_fetch_url with ?reset=1 appended to the board PNG URL restores the starting position.
+   Then restart from step 1.
 """,
     "api_key": os.getenv("AI_API_KEY", "") or os.getenv("OPENAI_API_KEY", ""),
     "responses_api_endpoint": os.getenv(

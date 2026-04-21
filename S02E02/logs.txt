@@ -192,3 +192,14 @@
 2026-03-30T20:59:24+00:00 _post_json {"url":"https://hub.ag3nts.org/verify","body":{"apikey":"<redacted>","task":"categorize","answer":{"prompt":"CACHE: classify DNG/NEU. If desc contains 'reactor' or 'fuel' => NEU. If contains weapon words (pistol,rifle,shotgun,knife) => DNG. Else NEU. ID i5683: Bag of stainless steel bolts, nuts, and washers in metric sizes. Answer DNG or NEU."}}}
 2026-03-30T20:59:28+00:00 _post_json {"url":"https://hub.ag3nts.org/verify","body":{"apikey":"<redacted>","task":"categorize","answer":{"prompt":"CACHE: classify DNG/NEU. If desc contains 'reactor' or 'fuel' => NEU. If contains weapon words (pistol,rifle,shotgun,knife) => DNG. Else NEU. ID i0619: Reactor fuel cassette designed for experimental fast-breeder reactor models. Answer DNG or NEU."}}}
 2026-03-30T20:59:46+00:00 _post_json {"url":"https://hub.ag3nts.org/verify","body":{"apikey":"<redacted>","task":"categorize","answer":{"prompt":"CACHE: classify DNG/NEU. If desc contains 'reactor' or 'fuel' => NEU. If contains weapon words (pistol,rifle,shotgun,knife) => DNG. Else NEU. ID i0385: Circuit boards from scrapped radios. Answer DNG or NEU."}}}
+2026-04-15T17:31:25+00:00 _post_json {"url":"https://hub.ag3nts.org/verify","body":{"apikey":"<redacted>","task":"electricity","answer":{"rotate":"1x2"}}}
+2026-04-15T17:31:27+00:00 _post_json {"url":"https://hub.ag3nts.org/verify","body":{"apikey":"<redacted>","task":"electricity","answer":{"rotate":"1x3"}}}
+2026-04-15T17:31:28+00:00 _post_json {"url":"https://hub.ag3nts.org/verify","body":{"apikey":"<redacted>","task":"electricity","answer":{"rotate":"1x3"}}}
+2026-04-15T17:31:30+00:00 _post_json {"url":"https://hub.ag3nts.org/verify","body":{"apikey":"<redacted>","task":"electricity","answer":{"rotate":"1x3"}}}
+2026-04-15T17:31:31+00:00 _post_json {"url":"https://hub.ag3nts.org/verify","body":{"apikey":"<redacted>","task":"electricity","answer":{"rotate":"2x1"}}}
+2026-04-15T17:31:34+00:00 _post_json {"url":"https://hub.ag3nts.org/verify","body":{"apikey":"<redacted>","task":"electricity","answer":{"rotate":"2x1"}}}
+2026-04-15T17:31:36+00:00 _post_json {"url":"https://hub.ag3nts.org/verify","body":{"apikey":"<redacted>","task":"electricity","answer":{"rotate":"2x1"}}}
+2026-04-15T17:31:37+00:00 _post_json {"url":"https://hub.ag3nts.org/verify","body":{"apikey":"<redacted>","task":"electricity","answer":{"rotate":"2x2"}}}
+2026-04-15T17:31:40+00:00 _post_json {"url":"https://hub.ag3nts.org/verify","body":{"apikey":"<redacted>","task":"electricity","answer":{"rotate":"3x1"}}}
+2026-04-15T17:31:53+00:00 _post_json {"url":"https://hub.ag3nts.org/verify","body":{"apikey":"<redacted>","task":"electricity","answer":{"rotate":"2x2"}}}
+2026-04-15T17:31:55+00:00 _post_json {"url":"https://hub.ag3nts.org/verify","body":{"apikey":"<redacted>","task":"electricity","answer":{"rotate":"2x2"}}}

@@ -1,5 +1,5 @@
 """
-Native tools: filesystem (sandboxed) + vision + wait + URL fetch.
+Native tools: filesystem (sandboxed) + vision + image preprocessing + wait + URL fetch.
 
 Filesystem tools only access FS_SANDBOX_ROOT (default: ./Documentation).
 """
@@ -167,6 +167,149 @@ def fs_fetch_url(args: dict) -> dict:
     if content_type:
         out["content_type"] = content_type
     return out
+
+
+def opencv_simplify_bw(args: dict) -> dict:
+    """Grayscale + denoise + threshold → high-contrast B&W PNG/JPEG under the sandbox."""
+    try:
+        import cv2
+        import numpy as np
+    except ImportError:
+        return {
+            "error": "Missing dependency: install opencv-python-headless and numpy (see requirements.txt).",
+            "source_path": args.get("source_path"),
+        }
+
+    src_rel = str(args["source_path"]).strip()
+    dst_rel = str(args["destination_path"]).strip()
+    method = str(args.get("method", "otsu")).strip().lower()
+    invert = bool(args.get("invert", False))
+
+    blur_raw = args.get("blur_kernel", 0)
+    try:
+        blur_k = int(blur_raw)
+    except (TypeError, ValueError):
+        return {"error": "blur_kernel must be an integer", "blur_kernel": blur_raw}
+    if blur_k < 0 or blur_k > 31:
+        return {"error": "blur_kernel must be between 0 and 31", "blur_kernel": blur_k}
+    if blur_k > 0 and blur_k % 2 == 0:
+        blur_k += 1  # Gaussian kernel must be odd
+
+    max_side_raw = args.get("max_side", 0)
+    try:
+        max_side_val = int(max_side_raw)
+    except (TypeError, ValueError):
+        return {"error": "max_side must be an integer", "max_side": max_side_raw}
+    max_side: int | None = None if max_side_val <= 0 else max_side_val
+    if max_side is not None and max_side < 32:
+        return {"error": "max_side must be 0 (no resize) or at least 32", "max_side": max_side}
+
+    if method not in ("otsu", "adaptive", "fixed"):
+        return {
+            "error": 'method must be one of: "otsu", "adaptive", "fixed"',
+            "method": method,
+        }
+
+    src = _safe_path(src_rel)
+    dst = _safe_path(dst_rel)
+    if not src.is_file():
+        return {"error": f"Not a file: {src_rel}", "source_path": src_rel}
+    if dst.exists() and dst.is_dir():
+        return {"error": f"Destination is a directory: {dst_rel}", "destination_path": dst_rel}
+
+    try:
+        raw = src.read_bytes()
+        arr = np.frombuffer(raw, dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
+    except OSError as e:
+        return {"error": str(e), "source_path": src_rel}
+
+    if img is None:
+        return {"error": "Could not decode image (unsupported or corrupt file)", "source_path": src_rel}
+
+    if img.ndim == 2:
+        gray = img
+    elif img.ndim == 3:
+        ch = img.shape[2]
+        if ch == 4:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGRA2GRAY)
+        elif ch == 3:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        else:
+            return {"error": f"Unsupported channel count: {ch}", "source_path": src_rel}
+    else:
+        return {"error": "Unsupported image shape", "source_path": src_rel}
+
+    if max_side is not None:
+        h, w = gray.shape[:2]
+        m = max(h, w)
+        if m > max_side:
+            scale = max_side / m
+            nw, nh = max(1, int(w * scale)), max(1, int(h * scale))
+            gray = cv2.resize(gray, (nw, nh), interpolation=cv2.INTER_AREA)
+
+    gray = cv2.fastNlMeansDenoising(gray, None, h=10, templateWindowSize=7, searchWindowSize=21)
+
+    if blur_k > 0:
+        gray = cv2.GaussianBlur(gray, (blur_k, blur_k), 0)
+
+    if method == "otsu":
+        _t, bw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    elif method == "adaptive":
+        bw = cv2.adaptiveThreshold(
+            gray,
+            255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY,
+            11,
+            2,
+        )
+    else:
+        _t, bw = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY)
+
+    if invert:
+        bw = cv2.bitwise_not(bw)
+
+    allowed_ext = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff")
+    if not dst.suffix:
+        dst = dst.with_suffix(".png")
+    ext = dst.suffix.lower()
+    if ext not in allowed_ext:
+        return {
+            "error": f"destination_path must use a supported extension {allowed_ext}; got {ext or '(none)'}",
+            "destination_path": dst_rel,
+        }
+
+    try:
+        ok, buf = cv2.imencode(ext, bw)
+        if not ok:
+            return {"error": "cv2.imencode failed", "destination_path": dst_rel}
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(buf.tobytes())
+    except OSError as e:
+        return {"error": str(e), "destination_path": dst_rel}
+
+    if src.resolve() != dst.resolve():
+        try:
+            src.unlink()
+        except OSError:
+            pass
+
+    try:
+        dest_report = str(dst.resolve().relative_to(FS_SANDBOX_ROOT.resolve())).replace("\\", "/")
+    except ValueError:
+        dest_report = dst_rel
+
+    return {
+        "destination_path": dest_report,
+        "method": method,
+        "invert": invert,
+        "blur_kernel": blur_k,
+        "max_side": max_side,
+        "shape": {"width": int(bw.shape[1]), "height": int(bw.shape[0])},
+        "bytes_written": dst.stat().st_size,
+        "ok": True,
+    }
 
 
 def understand_image(args: dict) -> dict:
@@ -498,6 +641,55 @@ native_tools = [
     },
     {
         "type": "function",
+        "name": "opencv_simplify_bw",
+        "description": (
+            "Convert a color or grayscale image to a simplified black-and-white image (OpenCV: grayscale, "
+            "optional blur/resize, then global Otsu, adaptive, or fixed threshold). "
+            "Input and output paths must be under Documentation/ like other fs_* tools. "
+            "Always call this BEFORE understand_image to improve vision accuracy on diagrams."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "source_path": {
+                    "type": "string",
+                    "description": "Input image path under Documentation/, e.g. electricity.png",
+                },
+                "destination_path": {
+                    "type": "string",
+                    "description": (
+                        "Output path under Documentation/; use .png or .jpg. "
+                        "If the path has no extension, .png is appended."
+                    ),
+                },
+                "method": {
+                    "type": "string",
+                    "description": (
+                        'Threshold mode: "otsu" (auto global threshold), '
+                        '"adaptive" (local threshold, good for uneven lighting), '
+                        'or "fixed" (binary at gray 128). Pass "otsu" if unsure.'
+                    ),
+                },
+                "blur_kernel": {
+                    "type": "integer",
+                    "description": "Gaussian blur kernel size (odd integer 0–31); 0 disables blur. Use 0 or 3.",
+                },
+                "max_side": {
+                    "type": "integer",
+                    "description": "Downscale so the longer side is at most this many pixels (min 32). Use 0 to skip resizing.",
+                },
+                "invert": {
+                    "type": "boolean",
+                    "description": "If true, invert B&W after thresholding (light wires on dark bg). Usually false.",
+                },
+            },
+            "required": ["source_path", "destination_path", "method", "blur_kernel", "max_side", "invert"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+    {
+        "type": "function",
         "name": "wait_seconds",
         "description": (
             "Pause execution for a given number of seconds. "
@@ -577,6 +769,7 @@ _NATIVE_HANDLERS = {
     "fs_write": fs_write,
     "fs_fetch_url": fs_fetch_url,
     "understand_image": understand_image,
+    "opencv_simplify_bw": opencv_simplify_bw,
     "wait_seconds": wait_seconds,
     "post_verify_json": post_verify_json,
     "send_verify": send_verify,
