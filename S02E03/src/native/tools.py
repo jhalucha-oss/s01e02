@@ -6,6 +6,7 @@ Filesystem tools only access FS_SANDBOX_ROOT (default: ./Documentation).
 
 import base64
 import json
+import re
 import shutil
 import time
 from pathlib import Path
@@ -167,6 +168,101 @@ def fs_fetch_url(args: dict) -> dict:
     if content_type:
         out["content_type"] = content_type
     return out
+
+
+FS_GREP_MAX_MATCHES = 500
+
+
+def count_tokens(args: dict) -> dict:
+    """Count tokens in a text string using tiktoken (cl100k_base / o200k_base / p50k_base)."""
+    text = args.get("text", "")
+    if not isinstance(text, str):
+        return {"error": "text must be a string", "text": text}
+    encoding_name = str(args.get("encoding", "cl100k_base")).strip()
+    allowed = ("cl100k_base", "o200k_base", "p50k_base")
+    if encoding_name not in allowed:
+        return {"error": f"encoding must be one of {allowed}", "encoding": encoding_name}
+
+    char_count = len(text)
+    try:
+        import tiktoken
+        enc = tiktoken.get_encoding(encoding_name)
+        token_count = len(enc.encode(text))
+        return {
+            "token_count": token_count,
+            "char_count": char_count,
+            "encoding": encoding_name,
+            "estimated": False,
+        }
+    except Exception:  # noqa: BLE001
+        token_count = max(1, char_count // 4)
+        return {
+            "token_count": token_count,
+            "char_count": char_count,
+            "encoding": "estimated_4chars_per_token",
+            "estimated": True,
+        }
+
+
+def fs_grep(args: dict) -> dict:
+    """Search for a pattern in a file or all text files under a sandbox directory."""
+    path_arg = str(args.get("path", ".")).strip()
+    pattern = str(args.get("pattern", "")).strip()
+    use_regex = bool(args.get("regex", False))
+    case_sensitive = bool(args.get("case_sensitive", True))
+    max_matches = int(args.get("max_matches", 100))
+
+    if not pattern:
+        return {"error": "pattern must not be empty"}
+    if max_matches < 1 or max_matches > FS_GREP_MAX_MATCHES:
+        return {"error": f"max_matches must be between 1 and {FS_GREP_MAX_MATCHES}"}
+
+    try:
+        target = _safe_path(path_arg)
+    except ValueError as e:
+        return {"error": str(e), "path": path_arg}
+
+    flags = 0 if case_sensitive else re.IGNORECASE
+    try:
+        compiled = re.compile(pattern if use_regex else re.escape(pattern), flags)
+    except re.error as e:
+        return {"error": f"Invalid regex: {e}", "pattern": pattern}
+
+    if target.is_file():
+        files = [target]
+    elif target.is_dir():
+        files = sorted(p for p in target.rglob("*") if p.is_file())
+    else:
+        return {"error": f"Path does not exist: {path_arg}", "path": path_arg}
+
+    matches: list[dict] = []
+    truncated = False
+
+    for fpath in files:
+        try:
+            lines = fpath.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        try:
+            rel = str(fpath.relative_to(FS_SANDBOX_ROOT)).replace("\\", "/")
+        except ValueError:
+            rel = str(fpath)
+        for lineno, line in enumerate(lines, start=1):
+            if compiled.search(line):
+                matches.append({"file": rel, "line": lineno, "text": line})
+                if len(matches) >= max_matches:
+                    truncated = True
+                    break
+        if truncated:
+            break
+
+    return {
+        "matches": matches,
+        "total_matches": len(matches),
+        "truncated": truncated,
+        "pattern": pattern,
+        "regex": use_regex,
+    }
 
 
 def opencv_simplify_bw(args: dict) -> dict:
@@ -759,7 +855,82 @@ native_tools = [
             "additionalProperties": False,
         },
         "strict": True,
-    }
+    },
+    {
+        "type": "function",
+        "name": "count_tokens",
+        "description": (
+            "Count the number of tokens in a text string using tiktoken. "
+            "Use this BEFORE sending any answer to verify the token budget. "
+            "For the failure task the hard limit is 1500 tokens — always check before send_verify. "
+            "Falls back to a conservative estimate (4 chars = 1 token) if tiktoken is unavailable."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string",
+                    "description": "The text to count tokens for.",
+                },
+                "encoding": {
+                    "type": "string",
+                    "description": (
+                        "Tiktoken encoding name: "
+                        '"cl100k_base" (GPT-4 / GPT-3.5, default), '
+                        '"o200k_base" (GPT-4o), '
+                        '"p50k_base" (older models). '
+                        "Use cl100k_base when unsure."
+                    ),
+                },
+            },
+            "required": ["text", "encoding"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+    {
+        "type": "function",
+        "name": "fs_grep",
+        "description": (
+            "Search for a pattern inside text files under the Documentation sandbox. "
+            "Useful for finding log lines that mention a specific component or keyword "
+            "without reading the entire file into context. "
+            "Searches a single file or recursively through all files in a directory."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": (
+                        "File or directory path under Documentation/, e.g. failure.log or . for sandbox root."
+                    ),
+                },
+                "pattern": {
+                    "type": "string",
+                    "description": (
+                        "Search pattern. Treated as a literal string by default. "
+                        "Set regex=true to use Python regex syntax."
+                    ),
+                },
+                "regex": {
+                    "type": "boolean",
+                    "description": "If true, treat pattern as a Python regular expression. Default false (literal match).",
+                },
+                "case_sensitive": {
+                    "type": "boolean",
+                    "description": "If false, search is case-insensitive. Default true.",
+                },
+                "max_matches": {
+                    "type": "integer",
+                    "description": f"Maximum number of matching lines to return (1–{FS_GREP_MAX_MATCHES}). Default 100.",
+                },
+            },
+            "required": ["path", "pattern", "regex", "case_sensitive", "max_matches"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
 ]
 
 _NATIVE_HANDLERS = {
@@ -773,6 +944,8 @@ _NATIVE_HANDLERS = {
     "wait_seconds": wait_seconds,
     "post_verify_json": post_verify_json,
     "send_verify": send_verify,
+    "count_tokens": count_tokens,
+    "fs_grep": fs_grep,
 }
 
 

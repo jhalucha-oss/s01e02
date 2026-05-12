@@ -1,7 +1,8 @@
 """
-Electricity Puzzle Agent (Python)
----------------------------------
-Solve a 3×3 cable-tile puzzle by rotating tiles until all plants are powered.
+Failure Log Agent (Python)
+--------------------------
+Filter a large power-plant log file to <=1500 tokens and iteratively
+submit it to the verification hub until the flag is returned.
 """
 
 import sys
@@ -16,23 +17,23 @@ from src.helpers import logger as log
 from src.helpers.stats import log_stats
 
 TASK_QUERY = """\
-Solve the electricity puzzle. Follow the workflow from your instructions:
-1. Fetch the current board PNG and the target (solved) PNG.
-2. Simplify both images to black-and-white with opencv_simplify_bw.
-3. Use understand_image on each simplified image to get a JSON description of every cell's cable edges (N/E/S/W) and plant labels.
-4. Compare current vs target, compute the number of 90° clockwise rotations needed per cell.
-5. Send rotations via send_verify (one call per rotation).
-6. After all rotations, re-fetch the board and verify it matches the target. Fix any remaining mismatches.
-7. When the hub returns {FLG:...}, save it to flag.txt and report the result.
+Solve the failure task. Follow the workflow from your instructions:
+1. Fetch the power-plant log file from the hub.
+2. Read the file once and filter only WARN/ERRO/CRIT lines related to plant subsystems.
+3. Build a condensed log string (one event per line, timestamp + severity + component + short description).
+4. Verify the string is under 6000 characters before sending.
+5. Send via send_verify with task "failure" and answer {"logs": "<condensed string>"}.
+6. Read the feedback — add any missing components identified by Centrala, recheck budget, re-send.
+7. Repeat until the hub returns {FLG:...}, then save the flag to flag.txt and report the result.
 """
 
 
 def main() -> None:
-    log.box("Electricity Puzzle Agent\nSolving 3x3 cable-tile puzzle.")
-    log.start("Starting electricity puzzle solver...")
+    log.box("Failure Log Agent\nFiltering power-plant logs for failure analysis.")
+    log.start("Starting failure log solver...")
     try:
         result = run(TASK_QUERY)
-        log.success("Puzzle complete")
+        log.success("Task complete")
         log.info(result["response"])
         log_stats()
     except Exception as e:  # noqa: BLE001
