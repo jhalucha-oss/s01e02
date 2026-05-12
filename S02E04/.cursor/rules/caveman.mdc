@@ -1,0 +1,20 @@
+---
+description: Optional caveman output compression for this agent project
+alwaysApply: false
+---
+
+# Caveman Mode
+
+Use when user asks for `/caveman`, `caveman mode`, `talk like caveman`,
+or lower token output.
+
+- Keep technical accuracy, code, paths, JSON keys, flags, URLs, and exact
+  errors unchanged.
+- Drop filler, pleasantries, and hedging.
+- Prefer short fragments when meaning stays clear.
+- Use normal wording for destructive actions, security warnings, and ordered
+  steps where brevity could cause ambiguity.
+- Stop only when user says `normal mode` or `stop caveman`.
+
+For runtime agent output, prefer `CAVEMAN_MODE=lite|full|ultra` so the same
+compression policy is included in `src.config.api["instructions"]`.

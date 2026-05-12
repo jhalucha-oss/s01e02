@@ -2,6 +2,20 @@
 
 Vision-based image classification using native filesystem tools and the OpenAI **Responses API** (same flow as the former JS + MCP version).
 
+## Caveman mode
+
+This repo supports optional caveman-style output compression for the runtime
+agent. It changes assistant prose only; code, JSON payloads, paths, URLs, flags,
+timestamps, and exact errors stay unchanged.
+
+```powershell
+$env:CAVEMAN_MODE = "lite"   # off (default), lite, full, ultra
+python app.py
+```
+
+Cursor IDE also has a local optional rule in `.cursor/rules/caveman.mdc`.
+Use it by asking for `/caveman` or `caveman mode` in chat.
+
 ## Run
 
 ```powershell

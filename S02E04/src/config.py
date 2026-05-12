@@ -4,6 +4,8 @@ import json
 import os
 from pathlib import Path
 
+from src.caveman import append_caveman_instructions
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # All fs_* and understand_image paths are resolved only under this directory (sandbox).
@@ -29,11 +31,7 @@ def _resolve_model(default: str) -> str:
     return os.getenv("OPENAI_MODEL", default)
 
 
-api = {
-    "model": _resolve_model("gpt-5.4"),
-    "vision_model": os.getenv("OPENAI_VISION_MODEL", _resolve_model("gpt-5.4")),
-    "max_output_tokens": int(os.getenv("MAX_OUTPUT_TOKENS", "16384")),
-    "instructions": """Task "failure" — filter a large power-plant log to <=1500 tokens and iterate on feedback.
+BASE_INSTRUCTIONS = """Task "failure" — filter a large power-plant log to <=1500 tokens and iterate on feedback.
 
 Your rules
  - Download the log file once; read it once with fs_read — it may be large so filter in a single pass
@@ -114,7 +112,14 @@ NOTES
  - If the file was updated at midnight and timestamps look wrong, re-fetch (step 1) and restart.
  - [ERRO] and [ERROR] are treated identically — match both spellings.
  - count_tokens returns estimated=true when tiktoken is unavailable; in that case stay under 1400 tokens as safety margin.
-""",
+"""
+
+
+api = {
+    "model": _resolve_model("gpt-5.4"),
+    "vision_model": os.getenv("OPENAI_VISION_MODEL", _resolve_model("gpt-5.4")),
+    "max_output_tokens": int(os.getenv("MAX_OUTPUT_TOKENS", "16384")),
+    "instructions": append_caveman_instructions(BASE_INSTRUCTIONS),
     "api_key": os.getenv("AI_API_KEY", "") or os.getenv("OPENAI_API_KEY", ""),
     "responses_api_endpoint": os.getenv(
         "RESPONSES_API_ENDPOINT",
