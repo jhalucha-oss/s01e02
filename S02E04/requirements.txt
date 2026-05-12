@@ -1,0 +1,2 @@
+# Optional: python-dotenv if you want to load .env automatically.
+tiktoken>=0.7.0
