@@ -1,0 +1,101 @@
+{
+  "endpoint": "zmail",
+  "url": "https://hub.ag3nts.org/api/zmail",
+  "requestBody": {
+    "action": "getMessages",
+    "ids": [
+      "6624add090a5cb06f5c192653b5a243c",
+      "5cdd3835258d56267b50086318b95d50",
+      "ad215f4a6b9064fe055f25cb4bb17e04",
+      "c47e6eb8a0e7295356f7d95fe16f01f3",
+      "200a0a6cd400d7a6591404f50fd57448",
+      "a7353b90b3c7d973255aa6cf36bcba0f"
+    ]
+  },
+  "requestWithApikey": {
+    "action": "getMessages",
+    "ids": [
+      "6624add090a5cb06f5c192653b5a243c",
+      "5cdd3835258d56267b50086318b95d50",
+      "ad215f4a6b9064fe055f25cb4bb17e04",
+      "c47e6eb8a0e7295356f7d95fe16f01f3",
+      "200a0a6cd400d7a6591404f50fd57448",
+      "a7353b90b3c7d973255aa6cf36bcba0f"
+    ],
+    "apikey": "<redacted>"
+  },
+  "apiResponse": {
+    "ok": true,
+    "action": "getMessages",
+    "count": 6,
+    "items": [
+      {
+        "rowID": 96,
+        "messageID": "a7353b90b3c7d973255aa6cf36bcba0f",
+        "threadID": 62073,
+        "subject": "Nowe hasło do systemu pracowniczego",
+        "message": "Ze względów bezpieczeństwa zmieniliśmy Twoje hasło dostępowe do systemu pracowniczego na nowe.\n\nProszę od teraz logować się hasłem:\nRABARBAR25\n\nPrzypominamy, że system pracowniczy zawiera dane poufne, więc przekazanie komukolwiek hasła dostępowego będzie karane!",
+        "from": "security@system.nwo",
+        "to": "operator04227@system.nwo",
+        "date": "2025-12-06 22:40",
+        "request": 1
+      },
+      {
+        "rowID": 92,
+        "messageID": "6624add090a5cb06f5c192653b5a243c",
+        "threadID": 62044,
+        "subject": "Podejrzana aktywność przy obiekcie PWR6132PL",
+        "message": "Jako obywatel wierny ideałom Systemu, uprzejmie donoszę, że w okolicach elektrowni w Żarnowcu, czyli przy obiekcie PWR6132PL widziałem ludzi z bronią. Są to prawdopodobnie rebelianci z Ruchu Oporu.\n\nNie wiem co tam robią, ale myślę, że zagrażają oni Systemowi. Chcę, abyście o tym wiedzeli. Sugeruję wysłać tam drona zwiadowczego\n\npozdrawiam Wiktor Borkowski / dla przyjaciół: Victor :)",
+        "from": "vik4tor@proton.me",
+        "to": "operator04227@system.nwo",
+        "date": "2026-03-05 16:25",
+        "request": 1
+      },
+      {
+        "rowID": 94,
+        "messageID": "c47e6eb8a0e7295356f7d95fe16f01f3",
+        "threadID": 62045,
+        "subject": "Przyjęliśmy Twoje zgłoszenie - Ticket SEC-41248",
+        "message": "Jak pewnie się domyślasz, jest to odpowiedź automatyczna. Twoje zgłoszenie zagrożenia trafiło do działu bezpieczeństwa i zostanie przez nas obsłużone tak szybko, jak to tylko możliwe",
+        "from": "noreply.security@system.nwo",
+        "to": "operator04227@system.nwo",
+        "date": "2026-03-06 12:34",
+        "request": 1
+      },
+      {
+        "rowID": 95,
+        "messageID": "200a0a6cd400d7a6591404f50fd57448",
+        "threadID": 62045,
+        "subject": "Re: Przyjęliśmy Twoje zgłoszenie - Ticket SEC-41248",
+        "message": "Chłopaki, co z tym ticketem?",
+        "from": "operator04227@system.nwo",
+        "to": "security@system.nwo",
+        "date": "2026-03-06 22:21",
+        "request": 1
+      },
+      {
+        "rowID": 1,
+        "messageID": "5cdd3835258d56267b50086318b95d50",
+        "threadID": 62045,
+        "subject": "Re: Przyjęliśmy Twoje zgłoszenie - Ticket SEC-41248",
+        "message": "Postanowilismy w najblizszy poniedzialek (tj. 2026-03-23) zbombardowac ten obiekt. Nie ma sensu wysylac tam sluzb zwiadowczych. Zrzucenie bomby niewiele kosztuje.\n    kod potwierdzenia przyjęcia akcji: SEC-c1e598764329cc9c377ef1d029be8ce (confirmation code)",
+        "from": "security@system.nwo",
+        "to": "operator04227@system.nwo",
+        "date": "2026-03-13 19:59",
+        "request": 3
+      },
+      {
+        "rowID": 2,
+        "messageID": "ad215f4a6b9064fe055f25cb4bb17e04",
+        "threadID": 62045,
+        "subject": "Re: Przyjęliśmy Twoje zgłoszenie - Ticket SEC-41248",
+        "message": "Ajj! zły kod potwierdzenia Ci wysłałem! Zgubiłem literkę na końcu. Poprawny to: SEC-c1e598764329cc9c377ef1d029be8ceb",
+        "from": "security@system.nwo",
+        "to": "operator04227@system.nwo",
+        "date": "2026-03-13 20:01",
+        "request": 4
+      }
+    ],
+    "notFound": []
+  }
+}

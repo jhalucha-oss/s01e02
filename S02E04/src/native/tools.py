@@ -452,6 +452,7 @@ def _post_json(url: str, payload: dict) -> dict:
 
 VERIFY_LOG_FILENAME = "send_verify_last.json"
 POST_VERIFY_LOG_FILENAME = "post_verify_last.json"
+HUB_API_LOG_FILENAME = "hub_api_last.json"
 
 
 def _write_verify_log(record: dict) -> Path:
@@ -464,6 +465,13 @@ def _write_verify_log(record: dict) -> Path:
 
 def _write_post_verify_log(record: dict) -> Path:
     log_path = (PROJECT_ROOT / POST_VERIFY_LOG_FILENAME).resolve()
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+    return log_path
+
+
+def _write_hub_api_log(record: dict) -> Path:
+    log_path = (PROJECT_ROOT / HUB_API_LOG_FILENAME).resolve()
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
     return log_path
@@ -596,6 +604,77 @@ def post_verify_json(args: dict) -> dict:
         "success": request_error is None,
         "sentBody": body,
         "verifyResponse": response,
+        "savedTo": str(log_path),
+    }
+    if request_error is not None:
+        out["requestError"] = request_error
+    return out
+
+
+def hub_api_request(args: dict) -> dict:
+    """POST arbitrary JSON to https://hub.ag3nts.org/api/<endpoint>; apikey is merged into the body."""
+    endpoint = str(args["endpoint"]).strip().lstrip("/")
+    if not endpoint:
+        return {"error": "endpoint must not be empty", "endpoint": endpoint}
+    if endpoint.startswith(("http://", "https://")) or ".." in endpoint.split("/"):
+        return {"error": "endpoint must be a relative API path", "endpoint": endpoint}
+
+    raw = args["body_json"]
+    if isinstance(raw, dict):
+        body = raw
+    else:
+        if not isinstance(raw, str):
+            return {"error": "body_json must be a JSON object or a JSON string", "body_json": raw}
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError as e:
+            return {"error": f"Invalid JSON: {e}", "body_json": raw}
+        if not isinstance(parsed, dict):
+            return {"error": "body_json must decode to a JSON object", "parsed": parsed}
+        body = parsed
+
+    base_url = "https://hub.ag3nts.org/api"
+    url = f"{base_url}/{endpoint}"
+    payload = {**body, "apikey": _require_api_value("AG3NTS_API_KEY")}
+    request_error: str | None = None
+    response: dict | None = None
+
+    try:
+        response = _post_json(url, payload)
+    except Exception as e:  # noqa: BLE001
+        request_error = str(e)
+
+    record: dict = {
+        "endpoint": endpoint,
+        "url": url,
+        "requestBody": body,
+        "requestWithApikey": {k: ("<redacted>" if k == "apikey" else v) for k, v in payload.items()},
+        "apiResponse": response,
+    }
+    if request_error is not None:
+        record["requestError"] = request_error
+
+    try:
+        log_path = _write_hub_api_log(record)
+        log.info(f"Zapisano log hub API: {log_path}")
+    except OSError as e:
+        log.error("Nie udało się zapisać pliku logu hub_api", str(e))
+        err_body: dict = {
+            "success": False,
+            "endpoint": endpoint,
+            "sentBody": body,
+            "apiResponse": response,
+            "saveError": str(e),
+        }
+        if request_error is not None:
+            err_body["requestError"] = request_error
+        return err_body
+
+    out: dict = {
+        "success": request_error is None,
+        "endpoint": endpoint,
+        "sentBody": body,
+        "apiResponse": response,
         "savedTo": str(log_path),
     }
     if request_error is not None:
@@ -831,6 +910,38 @@ native_tools = [
     },
     {
         "type": "function",
+        "name": "hub_api_request",
+        "description": (
+            "POST a JSON body to https://hub.ag3nts.org/api/<endpoint>. "
+            "The agent chooses the relative endpoint, e.g. zmail, and the JSON body. "
+            "The apikey from config is merged into the body and overrides any apikey in the payload. "
+            "Use for task-specific hub APIs that live under /api. Response is logged to hub_api_last.json."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "endpoint": {
+                    "type": "string",
+                    "description": (
+                        "Relative endpoint under https://hub.ag3nts.org/api, without scheme or host, "
+                        "e.g. zmail or another task API path."
+                    ),
+                },
+                "body_json": {
+                    "type": "string",
+                    "description": (
+                        "Stringified JSON object for the request body, e.g. "
+                        '{"action":"help","page":1}. Do not include apikey.'
+                    ),
+                },
+            },
+            "required": ["endpoint", "body_json"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
+    {
+        "type": "function",
         "name": "send_verify",
         "description": (
             "POST to the verify hub with apikey from config: task name plus answer as JSON. "
@@ -943,6 +1054,7 @@ _NATIVE_HANDLERS = {
     "opencv_simplify_bw": opencv_simplify_bw,
     "wait_seconds": wait_seconds,
     "post_verify_json": post_verify_json,
+    "hub_api_request": hub_api_request,
     "send_verify": send_verify,
     "count_tokens": count_tokens,
     "fs_grep": fs_grep,
